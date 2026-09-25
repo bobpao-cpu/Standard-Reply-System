@@ -22,15 +22,14 @@ select:focus, input:focus, textarea:focus {  border-color: var(--primary);  box-
 textarea {  resize: vertical;  min-height: 180px;  line-height: 1.6;  font-family: inherit;}
 button {  padding: 10px 16px;  border: 0;  border-radius: 6px;  cursor: pointer;  font-weight: 600;  font-size: 13px;  transition: background-color 0.15s ease-in-out, transform 0.05s ease;  display: inline-flex;  justify-content: center;  align-items: center;  gap: 6px;}
 button:active { transform: scale(0.99); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn-primary:hover { background: var(--primary-hover); }
 .btn-accent { background: var(--accent-teal); color: #fff; }
-.btn-accent:hover:not(:disabled) { background: var(--accent-teal-hover); }
+.btn-accent:hover { background: var(--accent-teal-hover); }
 .btn-danger { background: var(--danger); color: #fff; }
-.btn-danger:hover:not(:disabled) { background: var(--danger-hover); }
+.btn-danger:hover { background: var(--danger-hover); }
 .btn-secondary { background: #E2E8F0; color: #334155; }
-.btn-secondary:hover:not(:disabled) { background: #CBD5E1; }
+.btn-secondary:hover { background: #CBD5E1; }
 .btn-row { display: flex; gap: 10px; margin-top: 14px; }
 .flex-row { display: flex; gap: 8px; align-items: center; }
 .template-display {  background: var(--preview-bg);  border: 1px solid var(--border-color);  border-radius: 8px;  padding: 20px;  margin-top: 8px;  flex: 1;  display: flex;  flex-direction: column;}
@@ -45,8 +44,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 <div class="header-title">
   <h1>工單回覆公版管理系統</h1>
   <div class="header-actions">
-    <button id="undoBtn" class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="undo()" disabled>↩️ 復原 (上一步)</button>
-    <button id="redoBtn" class="btn-secondary" style="font-size:12px; padding:6px 12px;" onclick="redo()" disabled>↪️ 重做 (下一步)</button>
+    <button id="undoBtn" class="btn-secondary" style="font-size:13px; padding:8px 14px;" onclick="undo()">↩️ 復原</button>
   </div>
 </div>
 <div class="container">  <!-- 左側：選取與編輯卡片 -->  <div class="card">    <h2>📋 選擇與編輯公版</h2>
@@ -95,53 +93,32 @@ function persistData() {
   }
 }
 
-// 復原與重做機制 (Undo / Redo)
+// 復原歷史記錄 (Undo History Stack)
 let appData = loadData();
 let historyStack = [cloneData(appData)];
-let historyIndex = 0;
 let isCreatingNew = false;
 
-function updateHistoryButtons() {
-  document.getElementById('undoBtn').disabled = historyIndex <= 0;
-  document.getElementById('redoBtn').disabled = historyIndex >= historyStack.length - 1;
-}
-
 function pushState() {
-  if (historyIndex < historyStack.length - 1) {
-    historyStack = historyStack.slice(0, historyIndex + 1);
-  }
   historyStack.push(cloneData(appData));
-  historyIndex++;
   persistData();
-  updateHistoryButtons();
 }
 
 function undo() {
-  if (historyIndex > 0) {
-    historyIndex--;
-    appData = cloneData(historyStack[historyIndex]);
+  if (historyStack.length > 1) {
+    historyStack.pop(); // 移除目前的狀態
+    appData = cloneData(historyStack[historyStack.length - 1]); // 取出前一個狀態
     persistData();
     init();
-    updateHistoryButtons();
+    alert('↩️ 已復原至上一個未修改前的動作！');
+  } else {
+    alert('目前已是最初始狀態，無更早的動作可復原！');
   }
 }
 
-function redo() {
-  if (historyIndex < historyStack.length - 1) {
-    historyIndex++;
-    appData = cloneData(historyStack[historyIndex]);
-    persistData();
-    init();
-    updateHistoryButtons();
-  }
-}
-
-// 鍵盤快捷鍵 (Ctrl+Z / Ctrl+Y)
+// 鍵盤快捷鍵 (Ctrl+Z)
 document.addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-    if (e.shiftKey) { redo(); } else { undo(); }
-  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-    redo();
+    undo();
   }
 });
 
@@ -165,7 +142,6 @@ function init() {
   }
 
   updateTitleOptions();
-  updateHistoryButtons();
 }
 
 function updateTitleOptions() {
